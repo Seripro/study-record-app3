@@ -26,8 +26,8 @@
 ### 1. リポジトリをクローン
 
 ```bash
-git clone https://github.com/Seripro/kadai3.git
-cd kadai3
+git clone https://github.com/Seripro/study-record-app3.git
+cd study-record-app3
 ```
 
 ### 2. 依存関係のインストール
