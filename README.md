@@ -21,6 +21,15 @@
 - Jest（テスト）
 - GitHub Actions（CI/CD）
 
+## アーキテクチャ
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/architecture-dark.png">
+  <img src="./docs/architecture.png" alt="学習記録アプリのアーキテクチャ図">
+</picture>
+
+Firebase Hostingから配信されるReact SPAが、Supabase JSを介して`study-record`テーブルを直接操作します。GitHub ActionsではJestによるテストとViteによるビルドを実行し、ビルド結果をFirebase Hostingへデプロイします。
+
 ## セットアップ
 
 ### 1. リポジトリをクローン
