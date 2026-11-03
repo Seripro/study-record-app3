@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学習記録アプリ アーキテクチャ</title>
+<style>
+:root {
+  color-scheme: light;
+  --color-paper: oklch(98.5% 0.004 250);
+  --color-rule: oklch(93% 0.007 255);
+  --color-rule-2: oklch(83% 0.011 255);
+  --color-muted: oklch(56% 0.013 255);
+  --color-neutral: oklch(46% 0.015 255);
+  --color-ink: oklch(24% 0.020 258);
+  --color-accent: oklch(58% 0.20 256);
+  --color-g1: oklch(68% 0.15 55);
+  --color-g1-ink: oklch(52% 0.14 50);
+  --color-g1-tint: oklch(96.5% 0.015 60 / .5);
+  --color-accent-soft: oklch(58% 0.20 256 / .45);
+  --color-accent-tint: oklch(97% 0.012 256 / .5);
+  --color-veil: oklch(98.5% 0.004 250 / .78);
+  --font-display: "Geist", "Hiragino Sans", "Yu Gothic UI", "Noto Sans CJK JP", "Noto Sans JP", sans-serif;
+  --font-body: "Hiragino Sans", "Yu Gothic UI", "Noto Sans CJK JP", "Noto Sans JP", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-paper: oklch(18% 0.012 255);
+  --color-rule: oklch(24% 0.013 255);
+  --color-rule-2: oklch(38% 0.018 255);
+  --color-muted: oklch(65% 0.014 255);
+  --color-neutral: oklch(72% 0.012 255);
+  --color-ink: oklch(94% 0.008 255);
+  --color-accent: oklch(70% 0.16 256);
+  --color-g1: oklch(70% 0.14 55);
+  --color-g1-ink: oklch(78% 0.12 55);
+  --color-g1-tint: oklch(26% 0.030 60 / .40);
+  --color-accent-soft: oklch(70% 0.16 256 / .5);
+  --color-accent-tint: oklch(28% 0.045 256 / .35);
+  --color-veil: oklch(18% 0.012 255 / .78);
+}
+@font-face { font-family:"Geist"; font-style:normal; font-weight:100 900; font-display:swap; src:url(data:font/woff2;base64,%%FONT_DISPLAY%%) format("woff2"); }
+@font-face { font-family:"JetBrains Mono"; font-style:normal; font-weight:100 800; font-display:swap; src:url(data:font/woff2;base64,%%FONT_JBM%%) format("woff2"); }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--color-paper); color:var(--color-ink); font-family:var(--font-body); padding:40px 24px 64px; }
+.page { width:fit-content; max-width:100%; margin:0 auto; }
+.head { display:grid; grid-template-columns:1fr auto; gap:24px; align-items:end; padding-bottom:16px; border-bottom:1px solid var(--color-rule-2); margin-bottom:24px; }
+.kicker, .role, .el, .legend, .foot { font-family:var(--font-mono); letter-spacing:.04em; }
+.kicker { font-size:11px; color:var(--color-accent); margin-bottom:8px; }
+h1 { font-family:var(--font-display); font-size:30px; line-height:1.2; }
+.lede { max-width:360px; font-size:12px; line-height:1.7; color:var(--color-neutral); }
+.scroller { overflow-x:auto; border:1px solid var(--color-rule-2); border-radius:10px; }
+.canvas { position:relative; width:1000px; height:790px; background:var(--color-paper); background-image:linear-gradient(var(--color-rule) 1px,transparent 1px),linear-gradient(90deg,var(--color-rule) 1px,transparent 1px); background-size:24px 24px; background-position:-1px -1px; }
+.group { position:absolute; border-radius:8px; }
+.group.ga { border:1.5px solid var(--color-g1); background:var(--color-g1-tint); }
+.group.gb { border:1.5px solid var(--color-accent-soft); background:var(--color-accent-tint); }
+.g-label { position:absolute; top:12px; left:12px; display:flex; align-items:center; gap:6px; font-family:var(--font-display); font-size:12px; font-weight:600; color:var(--color-accent); white-space:nowrap; }
+.ga > .g-label { color:var(--color-g1-ink); }
+.g-label img { width:14px; height:14px; }
+.g-label img.dk, .tile img.dk { display:none; }
+[data-theme="dark"] .g-label img.lt, [data-theme="dark"] .tile img.lt { display:none; }
+[data-theme="dark"] .g-label img.dk, [data-theme="dark"] .tile img.dk { display:block; }
+.node { position:absolute; width:132px; text-align:center; }
+.tile { width:60px; height:60px; margin:0 auto; border-radius:8px; background:#fff; border:1px solid var(--color-rule-2); display:grid; place-items:center; box-shadow:0 1px 2px oklch(24% .02 258 / .05); }
+.tile img { width:34px; height:34px; object-fit:contain; }
+.name { font-family:var(--font-display); font-weight:600; font-size:13px; margin-top:8px; }
+.role { font-size:9.5px; color:var(--color-muted); margin-top:2px; }
+.name span, .role span { background:var(--color-veil); backdrop-filter:blur(1.5px); padding:0 4px; border-radius:3px; }
+svg.edges { position:absolute; inset:0; width:1000px; height:790px; pointer-events:none; }
+.e { stroke:var(--color-accent); stroke-width:1.6; fill:none; }
+.n { stroke:var(--color-neutral); stroke-width:1.4; fill:none; }
+.dash { stroke-dasharray:4 5; }
+.el { font-size:10.5px; fill:var(--color-neutral); paint-order:stroke; stroke:var(--color-paper); stroke-width:4px; stroke-linejoin:round; }
+.el.a { fill:var(--color-accent); }
+.legend { display:flex; gap:24px; margin-top:16px; font-size:10px; color:var(--color-muted); }
+.sw { display:inline-block; width:30px; margin-right:6px; border-top:1.6px solid var(--color-accent); vertical-align:middle; }
+.sw.n { border-color:var(--color-neutral); border-top-width:1.4px; }
+.sw.dash { border-top-style:dashed; }
+.foot { margin-top:40px; padding-top:16px; border-top:1px solid var(--color-rule-2); display:flex; justify-content:space-between; gap:16px; font-size:10px; color:var(--color-muted); }
+.foot a { color:inherit; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="head">
+    <div><div class="kicker">study-record-app3 / system overview</div><h1>学習記録アプリ アーキテクチャ</h1></div>
+    <p class="lede">Firebase Hostingから配信されるReact SPAが、Supabaseのstudy-recordテーブルを直接操作します。</p>
+  </header>
+  <div class="scroller"><div class="canvas">
+    <div class="group ga" style="left:180px;top:100px;width:180px;height:210px"><div class="g-label"><img src="%%ICON_firebase%%" alt="">Firebase</div></div>
+    <div class="group gb" style="left:380px;top:100px;width:370px;height:420px"><div class="g-label"><img class="lt" src="%%ICON_react%%" alt=""><img class="dk" src="%%ICON_react_dark%%" alt="">ブラウザ</div></div>
+    <div class="group ga" style="left:780px;top:100px;width:180px;height:210px"><div class="g-label"><img src="%%ICON_supabase%%" alt="">Supabase</div></div>
+    <div class="group gb" style="left:210px;top:540px;width:580px;height:210px"><div class="g-label"><img class="lt" src="%%ICON_github%%" alt=""><img class="dk" src="%%ICON_github_dark%%" alt="">GitHub CI/CD</div></div>
+
+    <svg class="edges" viewBox="0 0 1000 790" aria-hidden="true">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="context-stroke"/></marker></defs>
+      <path class="e" d="M126 190 H234" marker-end="url(#ar)"/><text class="el a" x="180" y="182" text-anchor="middle">HTTPS</text>
+      <path class="e" d="M306 190 H434" marker-end="url(#ar)"/><text class="el a" x="370" y="182" text-anchor="middle">静的配信</text>
+      <path class="e" d="M506 190 H624" marker-end="url(#ar)"/><text class="el a" x="565" y="182" text-anchor="middle">状態・操作</text>
+      <path class="e" d="M696 190 H834" marker-end="url(#ar)"/><text class="el a" x="765" y="182" text-anchor="middle">CRUD</text>
+      <path class="n" d="M470 266 V320 H565 V364" marker-end="url(#ar)"/><text class="el" x="518" y="312" text-anchor="middle">UI部品</text>
+      <path class="n dash" d="M466 630 H336" marker-end="url(#ar)"/><text class="el" x="401" y="622" text-anchor="middle">test</text>
+      <path class="n dash" d="M534 630 H664" marker-end="url(#ar)"/><text class="el" x="599" y="622" text-anchor="middle">build</text>
+      <path class="n dash" d="M700 594 V530 H270 V266" marker-end="url(#ar)"/><text class="el" x="485" y="522" text-anchor="middle">deploy</text>
+    </svg>
+
+    <div class="node" style="left:24px;top:160px"><div class="tile"><img src="%%ICON_user%%" alt=""></div><div class="name"><span>利用者</span></div><div class="role"><span>web browser</span></div></div>
+    <div class="node" style="left:204px;top:160px"><div class="tile"><img src="%%ICON_firebase%%" alt=""></div><div class="name"><span>Firebase Hosting</span></div><div class="role"><span>static hosting</span></div></div>
+    <div class="node" style="left:404px;top:160px"><div class="tile"><img src="%%ICON_react%%" alt=""></div><div class="name"><span>React SPA</span></div><div class="role"><span>TypeScript frontend</span></div></div>
+    <div class="node" style="left:594px;top:160px"><div class="tile"><img src="%%ICON_supabase%%" alt=""></div><div class="name"><span>Supabase JS</span></div><div class="role"><span>data client</span></div></div>
+    <div class="node" style="left:804px;top:160px"><div class="tile"><img src="%%ICON_supabase%%" alt=""></div><div class="name"><span>study-record</span></div><div class="role"><span>PostgreSQL table</span></div></div>
+    <div class="node" style="left:499px;top:370px"><div class="tile"><img src="%%ICON_chakra%%" alt=""></div><div class="name"><span>Chakra UI</span></div><div class="role"><span>component library</span></div></div>
+    <div class="node" style="left:234px;top:600px"><div class="tile"><img src="%%ICON_jest%%" alt=""></div><div class="name"><span>Jest</span></div><div class="role"><span>component tests</span></div></div>
+    <div class="node" style="left:434px;top:600px"><div class="tile"><img src="%%ICON_github%%" alt=""></div><div class="name"><span>GitHub Actions</span></div><div class="role"><span>workflow runner</span></div></div>
+    <div class="node" style="left:634px;top:600px"><div class="tile"><img src="%%ICON_vite%%" alt=""></div><div class="name"><span>Vite</span></div><div class="role"><span>production build</span></div></div>
+  </div></div>
+  <div class="legend"><span><span class="sw"></span>実行時のデータフロー</span><span><span class="sw n"></span>内部依存</span><span><span class="sw n dash"></span>テスト / ビルド / デプロイ</span></div>
+  <div class="foot"><span>study-record-app3</span><span>icons: svgl / Lucide · made with <a href="https://github.com/caru-ini/stack-diagram">stack-diagram</a></span></div>
+</div>
+</body>
+</html>
